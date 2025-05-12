@@ -1,0 +1,161 @@
+/*
+ * Simple Calculator using Recursive Descent Parsing
+ * Handles integer arithmetic with +, *, (), and integers
+ * 
+ * Grammar:
+ * expr    → term ('+' term)*
+ * term    → factor ('*' factor)*
+ * factor  → NUMBER | '(' expr ')'
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+
+// Global variables
+char *input;     // Input string
+char current;    // Current character being processed
+
+// Function prototypes for recursive descent parsing
+int expr(void);
+int term(void);
+int factor(void);
+
+// Error handling function
+void error(const char *message) {
+    printf("Error: %s\n", message);
+    exit(1);
+}
+
+// Function to get the next character from input
+void nextChar() {
+    current = *input++;
+}
+
+// Function to check if current character is a specific character
+// and advance to next character if it is
+void match(char expected) {
+    if (current == expected) {
+        nextChar();
+    } else {
+        char message[50];
+        sprintf(message, "Expected '%c', found '%c'", expected, current);
+        error(message);
+    }
+}
+
+// Skip whitespace characters
+void skipWhitespace() {
+    while (isspace(current)) {
+        nextChar();
+    }
+}
+
+// Parse expression: expr → term ('+' term)*
+int expr() {
+    int result = term();  // Parse first term
+    
+    skipWhitespace();
+    
+    // Process any additional terms with + operators
+    while (current == '+') {
+        match('+');       // Consume '+'
+        skipWhitespace(); 
+        result += term(); // Add the next term to result
+        skipWhitespace();
+    }
+    
+    return result;
+}
+
+// Parse term: term → factor ('*' factor)*
+int term() {
+    int result = factor();  // Parse first factor
+    
+    skipWhitespace();
+    
+    // Process any additional factors with * operators
+    while (current == '*') {
+        match('*');        // Consume '*'
+        skipWhitespace();
+        result *= factor(); // Multiply the next factor to result
+        skipWhitespace();
+    }
+    
+    return result;
+}
+
+// Parse factor: factor → NUMBER | '(' expr ')'
+int factor() {
+    int result = 0;
+    skipWhitespace();
+    
+    if (isdigit(current)) {
+        // Handle NUMBER case
+        while (isdigit(current)) {
+            result = result * 10 + (current - '0');
+            nextChar();
+        }
+    } 
+    else if (current == '(') {
+        // Handle '(' expr ')' case
+        match('(');
+        skipWhitespace();
+        result = expr();
+        skipWhitespace();
+        match(')');
+    } 
+    else {
+        error("Expected number or '('");
+    }
+    
+    skipWhitespace();
+    return result;
+}
+
+// Initialize the parser with an input string
+void initParser(char *expression) {
+    input = expression;
+    nextChar();  // Get the first character
+}
+
+int main() {
+    char expression[100];
+    
+    printf("Simple Calculator (supports +, *, integers, and parentheses)\n");
+    printf("Enter 'exit' to quit\n\n");
+    
+    while (1) {
+        printf("Enter expression: ");
+        if (fgets(expression, sizeof(expression), stdin) == NULL) {
+            break;
+        }
+        
+        // Remove newline character if present
+        size_t len = strlen(expression);
+        if (len > 0 && expression[len-1] == '\n') {
+            expression[len-1] = '\0';
+        }
+        
+        // Check for exit command
+        if (strcmp(expression, "exit") == 0) {
+            break;
+        }
+        
+        // Parse and evaluate the expression
+        initParser(expression);
+        int result = expr();
+        
+        // Check if we've consumed the entire input
+        skipWhitespace();
+        if (current != '\0') {
+            printf("Warning: Extra characters at end of expression\n");
+        }
+        
+        printf("Result: %d\n\n", result);
+    }
+    
+    printf("Calculator exiting. Goodbye!\n");
+    return 0;
+}
